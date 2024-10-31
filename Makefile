@@ -77,7 +77,9 @@ src/globus_handler:
 src/ngx-dashboard:
 	git clone https://github.com/whole-tale/ngx-dashboard src/ngx-dashboard
 
-sources_wt: src src/gwvolman src/wholetale src/wt_data_manager src/wt_home_dir src/globus_handler src/girderfs src/ngx-dashboard src/virtual_resources src/wt_versioning src/sem_viewer src/table_view src/synced_folders src/item_previews src/dataflows src/sample_tracker .env traefik/certs/fullchain.pem traefik/certs/privkey.pem
+src/ngx-dashboard/dist/browser: src/ngx-dashboard rebuild_dashboard
+
+sources_wt: src src/gwvolman src/wholetale src/wt_data_manager src/wt_home_dir src/globus_handler src/girderfs src/ngx-dashboard src/virtual_resources src/wt_versioning src/sem_viewer src/table_view src/synced_folders src/item_previews src/dataflows src/sample_tracker .env traefik/certs/fullchain.pem traefik/certs/privkey.pem src/ngx-dashboard/dist/browser
 
 dirs: $(SUBDIRS)
 
