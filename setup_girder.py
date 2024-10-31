@@ -14,16 +14,16 @@ params = {
     "admin": True,
 }
 headers = {"Content-Type": "application/json", "Accept": "application/json"}
-
+domain = os.environ.get("domain", "local.xarthisius.xyz")
 
 def final_msg():
     print("-------------- You should be all set!! -------------")
-    print("try going to https://girder.local.wholetale.org and log in with: ")
+    print(f"try going to https://girder.{domain} and log in with: ")
     print("  user : %s" % params["login"])
     print("  pass : %s" % params["password"])
 
 
-api_url = "https://girder.local.wholetale.org/api/v1"
+api_url = f"https://girder.{domain}/api/v1"
 
 # Give girder time to start
 while True:
@@ -70,11 +70,12 @@ plugins = [
 ]
 if os.environ.get("DATACAT"):
     plugins += [
+        "item_previews",
         "table_view",
         "synced_folders",
         "dataflows",
         "sem_viewer",
-        "minio_assetstore",
+        "sample_tracker",
     ]
 r = requests.put(
     api_url + "/system/plugins",
@@ -104,7 +105,7 @@ print("Setting up Plugin")
 settings = [
     {
         "key": "core.cors.allow_origin",
-        "value": "https://dashboard.local.wholetale.org,http://localhost:4200,https://legacy.local.wholetale.org",
+        "value": f"https://dashboard.{domain},http://localhost:4200,https://legacy.{domain}",
     },
     {
         "key": "core.cors.allow_headers",
@@ -115,7 +116,7 @@ settings = [
             "X-Forwarded-Host, Remote-Addr, Cache-Control"
         ),
     },
-    {"key": "core.cookie_domain", "value": ".local.wholetale.org"},
+    {"key": "core.cookie_domain", "value": f".{domain}"},
     {"key": "core.secure_cookie", "value": True},
     {"key": "worker.api_url", "value": "http://girder:8080/api/v1"},
     {"key": "worker.broker", "value": "redis://redis/"},
@@ -151,7 +152,7 @@ if os.environ.get("DATACAT"):
         {"key": "wholetale.dashboard_link_title", "value": "Tale Dashboard"},
         {"key": "wholetale.catalog_link_title", "value": "Data Catalog"},
         {"key": "wholetale.enable_data_catalog", "value": True},
-        {"key": "core.registration_policy", "value": "approve"},
+        # {"key": "core.registration_policy", "value": "approve"},
     ]
 
 r = requests.put(

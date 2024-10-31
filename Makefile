@@ -2,7 +2,7 @@
 	rebuild_dashboard watch_dashboard \
 	restart_worker restart_girder globus_handler_src status update_src
 
-SUBDIRS = src volumes/ps volumes/workspaces volumes/homes volumes/base volumes/versions volumes/runs volumes/licenses volumes/mountpoints volumes/tmp volumes/minio
+SUBDIRS = src volumes/ps volumes/workspaces volumes/homes volumes/base volumes/versions volumes/runs volumes/licenses volumes/mountpoints volumes/tmp
 TAG = latest
 MEM_LIMIT = 2048
 NODE = node --max_old_space_size=${MEM_LIMIT}
@@ -19,6 +19,27 @@ images:
 	docker pull wholetale/gwvolman:$(TAG)
 	docker pull wholetale/repo2docker_wholetale:$(TAG)
 	docker pull wholetale/ngx-dashboard:$(TAG)
+
+.env:
+	curl -s -o .env https://wt.xarthisius.xyz/wt_local_env
+
+traefik/certs:
+	mkdir -p traefik/certs
+
+traefik/certs/fullchain.pem: traefik/certs
+	curl -s -o traefik/certs/fullchain.pem https://wt.xarthisius.xyz/wt_local_cert
+
+traefik/certs/privkey.pem: traefik/certs
+	curl -s -o traefik/certs/privkey.pem https://wt.xarthisius.xyz/wt_local_key
+
+src/item_previews:
+	git clone https://github.com/htmdec/item_previews src/item_previews
+
+src/dataflows:
+	git clone https://github.com/Xarthisius/girder-dataflows src/dataflows
+
+src/sample_tracker:
+	git clone https://github.com/htmdec/girder-sample-tracker src/sample_tracker
 
 src/sem_viewer:
 	git clone https://github.com/htmdec/sem_viewer src/sem_viewer
@@ -56,7 +77,7 @@ src/globus_handler:
 src/ngx-dashboard:
 	git clone https://github.com/whole-tale/ngx-dashboard src/ngx-dashboard
 
-sources_wt: src src/gwvolman src/wholetale src/wt_data_manager src/wt_home_dir src/globus_handler src/girderfs src/ngx-dashboard src/virtual_resources src/wt_versioning src/sem_viewer src/table_view src/synced_folders
+sources_wt: src src/gwvolman src/wholetale src/wt_data_manager src/wt_home_dir src/globus_handler src/girderfs src/ngx-dashboard src/virtual_resources src/wt_versioning src/sem_viewer src/table_view src/synced_folders src/item_previews src/dataflows src/sample_tracker .env traefik/certs/fullchain.pem traefik/certs/privkey.pem
 
 dirs: $(SUBDIRS)
 
@@ -82,15 +103,16 @@ dev: services
 		plugins/globus_handler \
 		plugins/virtual_resources \
 		plugins/wt_versioning \
-		plugins/minio_assetstore \
+		plugins/item_previews \
 		plugins/sem_viewer \
 		plugins/dataflows \
 		plugins/table_view \
+		plugins/sample_tracker \
 		plugins/synced_folders
-	docker exec -ti $$(docker ps --filter=name=wt_girder -q) girder-install web --dev --plugins=oauth,gravatar,jobs,worker,wt_data_manager,wholetale,wt_home_dir,globus_handler,sem_viewer,table_view,synced_folders,minio_assetstore,dataflows
+	docker exec -ti $$(docker ps --filter=name=wt_girder -q) girder-install web --dev --plugins=oauth,gravatar,jobs,worker,wt_data_manager,wholetale,wt_home_dir,globus_handler,sample_tracker,sem_viewer,table_view,synced_folders,dataflows,item_previews
 	docker exec --user=root -ti $$(docker ps --filter=name=wt_girder -q) pip install -r /gwvolman/requirements.txt -e /gwvolman
-	docker exec --user=root -ti $$(docker ps --filter=name=wt_girder -q) pip install -e /girderfs
-	./setup_girder.py
+	# docker exec --user=root -ti $$(docker ps --filter=name=wt_girder -q) pip install -e /girderfs
+	. ./.env && ./setup_girder.py
 
 restart_girder:
 	which jq || (echo "Please install jq to execute the 'restart_girder' make target" && exit 1)
@@ -141,6 +163,8 @@ tail_girder_err:
 reset_girder:
 	docker exec -ti $$(docker ps --filter=name=wt_girder -q) \
 		python3 -c 'from girder.models import getDbConnection;getDbConnection().drop_database("girder")'
+	docker exec -ti $$(docker ps --filter=name=wt_girder -q) \
+		touch /girder/girder/__init__.py
 
 clean:
 	-./destroy_instances.py
@@ -164,6 +188,7 @@ clean:
 	  sudo rm -rf volumes/$$dir ; \
 	done; true
 	-docker volume rm wt_mongo-cfg wt_mongo-data
+	-rm -f traefik/certs/fullchain.pem traefik/certs/privkey.pem
 
 status:
 	@-./scripts/git_status.sh
